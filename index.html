@@ -551,13 +551,20 @@ function openAdd(){
       <h3>生徒を追加</h3>
       <div class="frow"><label>名前</label><input id="mn" placeholder="山田 はな"></div>
       <div class="frow"><label>レベル</label>
-        <select id="ml">
+        <select id="ml" onchange="updateAddPreview()">
           <option value="バイエル">バイエル程度（45分 / 5回）</option>
           <option value="ブルグミュラー">ブルグミュラー程度（45分 / 5回）</option>
           <option value="ソナチネ">ソナチネ以上（50分 / 4回）</option>
         </select>
       </div>
-      <div class="frow"><label>ログインID</label><input id="ml2" placeholder="例：hanayamada"></div>
+      <div class="frow"><label>レッスン種別</label>
+        <select id="mvt" onchange="updateAddPreview()">
+          <option value="講師宅">講師宅レッスン</option>
+          <option value="出張">出張レッスン</option>
+        </select>
+      </div>
+      <div id="add-preview" style="background:#f4f8fc;border:1px solid #cde;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:4px;line-height:1.8"></div>
+      <div class="frow" style="margin-top:12px"><label>ログインID</label><input id="ml2" placeholder="例：hanayamada"></div>
       <div class="frow"><label>初期パスワード</label><input id="mp" value="1234"></div>
       <p class="note">チケット購入日は追加後に「生徒一覧」から変更できます。</p>
       <div class="mactions">
@@ -566,12 +573,25 @@ function openAdd(){
       </div>
     </div>
   </div>`;
+  setTimeout(updateAddPreview, 0);
+}
+function updateAddPreview(){
+  const lvKey=document.getElementById('ml')?.value;
+  const vt=document.getElementById('mvt')?.value;
+  const prev=document.getElementById('add-preview');
+  if(!lvKey||!vt||!prev)return;
+  const lv=LEVELS[lvKey];
+  const noVisit=vt==='出張'&&!lv.visit;
+  const priceInfo=noVisit?lv.home:(vt==='出張'?lv.visit:lv.home);
+  const warn=noVisit?' ⚠️ このレベルに出張レッスンはありません':'';
+  prev.innerHTML=`<b>${lv.label}</b>　${vt}レッスン${warn}<br>回数：<b>${lv.total}回</b>　／　料金：<b>¥${priceInfo.price.toLocaleString()}</b><br>返金単価：¥${priceInfo.refundPer.toLocaleString()} / 回`;
 }
 function cm(e){if(e.target.classList.contains('backdrop'))cmc()}
 function cmc(){document.getElementById('modal').innerHTML=''}
 function confirmAdd(){
   const name=(document.getElementById('mn').value||'').trim();
   const level=document.getElementById('ml').value;
+  const vt=document.getElementById('mvt').value;
   const lid=(document.getElementById('ml2').value||'').trim();
   const lpw=(document.getElementById('mp').value||'').trim();
   if(!name){alert('名前を入力してください');return}
@@ -579,8 +599,9 @@ function confirmAdd(){
   if(!lpw){alert('パスワードを入力してください');return}
   if(state.students.some(x=>x.loginId===lid)){alert('そのログインIDはすでに使われています');return}
   const lv=LEVELS[level];
-  state.students.push({id:state.nextId++,name,loginId:lid,loginPw:lpw,level,tickets:lv.total,purchased:todayISO(),
-    history:[{date:todayJP(),type:'購入',delta:lv.total}]});
+  if(vt==='出張'&&!lv.visit){alert('バイエル程度には出張レッスンがありません');return}
+  state.students.push({id:state.nextId++,name,loginId:lid,loginPw:lpw,level,visitType:vt,tickets:lv.total,purchased:todayISO(),
+    history:[{date:todayJP(),type:'購入',delta:lv.total,note:`${level}・${vt}`}]});
   save();cmc();renderTeacher();
 }
 
