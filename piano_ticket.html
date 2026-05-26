@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎹 Piano Ticket</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#2C5F8A;--accent-light:#E8F1F8;--accent-mid:#7AAFD4;
+  --warn:#C4720A;--warn-light:#FDF3E3;
+  --danger:#B33A3A;--danger-light:#FDEAEA;
+  --ok:#2A7A4F;--ok-light:#E6F5ED;
+  --bg:#F7F7F5;--card:#fff;--border:#E0E0E0;
+  --text:#222;--text-muted:#999;--text-sub:#555
+}
+body{font-family:'Hiragino Kline','Hiragino Sans','Yu Gothic',sans-serif;font-size:14px;background:var(--bg);min-height:100vh;color:var(--text)}
+.screen{max-width:700px;margin:0 auto;padding:1.5rem 1rem}
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90vh;gap:1.5rem}
+.login-logo{font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--accent);text-align:center}
+.login-logo span{font-size:13px;font-weight:400;color:var(--text-muted);display:block;margin-top:3px}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.75rem;width:320px;max-width:95vw;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.login-card h2{font-size:15px;font-weight:600;margin-bottom:1rem}
+.mode-btns{display:flex;gap:6px;margin-bottom:1rem}
+.mode-btn{flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;font-size:13px;color:var(--text-sub);transition:.15s}
+.mode-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:600}
+.fi{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:10px;outline:none;background:var(--card);color:var(--text)}
+.fi:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.login-btn:hover{background:#1e4d72}
+.login-err{font-size:12px;color:var(--danger);text-align:center;margin-top:7px;min-height:18px}
+.hidden{display:none!important}
+.teacher-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+.app-title{font-size:16px;font-weight:800;color:var(--accent)}
+.mode-badge{font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px}
+.logout-btn{font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:4px 8px}
+.logout-btn:hover{color:var(--text)}
+.tabs{display:flex;gap:2px;margin-bottom:1.25rem;background:#ebebeb;border-radius:10px;padding:3px}
+.tab{flex:1;padding:7px 4px;text-align:center;font-size:12px;border:none;background:none;cursor:pointer;border-radius:7px;color:var(--text-muted);font-weight:500;transition:.15s}
+.tab.active{background:var(--card);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.s-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin-bottom:1rem}
+.s-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;cursor:pointer;transition:.15s}
+.s-card:hover{border-color:var(--accent-mid)}
+.s-card.sel{border:2px solid var(--accent);background:var(--accent-light)}
+.s-nm{font-size:14px;font-weight:700;margin-bottom:1px}
+.s-lid{font-size:11px;color:var(--accent);margin-bottom:2px}
+.s-lv{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+.bar-wrap{background:#eee;border-radius:3px;height:5px;margin-bottom:5px}
+.bar-fill{height:5px;border-radius:3px;transition:width .3s}
+.bar-ok{background:var(--ok)}.bar-warn{background:var(--warn)}.bar-danger{background:var(--danger)}
+.s-cnt{font-size:12px;color:var(--text-muted)}.s-cnt b{color:var(--text)}
+.det{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:.75rem}
+.det-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem}
+.det-nm{font-size:18px;font-weight:800}
+.det-sub{font-size:12px;color:var(--text-muted);margin-top:3px}
+.dots{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}
+.dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.dot-rem{background:var(--accent);color:#fff}.dot-used{background:#f0f0f0;color:#ccc}
+.expiry{font-size:12px;padding:5px 12px;border-radius:7px;display:inline-block;margin-top:4px;font-weight:500}
+.expiry-ok{background:var(--ok-light);color:var(--ok)}
+.expiry-warn{background:var(--warn-light);color:var(--warn)}
+.expiry-danger{background:var(--danger-light);color:var(--danger)}
+.purchased-row{margin-top:12px;padding:10px 12px;background:#f9f9f7;border-radius:8px;border:1px solid #eee}
+.purchased-row .hlabel{margin-bottom:6px}
+.date-edit-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px}
+.date-edit-row input[type=date]{padding:6px 9px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);color:var(--text)}
+.purchased-current{font-size:11px;color:var(--text-muted);margin-top:5px}
+.actions{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+.abtn{padding:9px 16px;font-size:13px;border-radius:8px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:500;transition:.15s}
+.abtn:hover{background:#f5f5f5}
+.abtn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.abtn-primary:hover{background:#1e4d72}
+.abtn-warn{border-color:var(--warn);color:var(--warn)}.abtn-warn:hover{background:var(--warn-light)}
+.abtn-danger{border-color:var(--danger);color:var(--danger)}.abtn-danger:hover{background:var(--danger-light)}
+.abtn-sm{padding:5px 12px;font-size:12px}
+.hist{margin-top:1rem;border-top:1px solid #f0f0f0;padding-top:.75rem}
+.hlabel{font-size:11px;color:#bbb;font-weight:700;letter-spacing:.04em;margin-bottom:7px}
+.hrow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f8f8f8;font-size:12px}
+.hrow:last-child{border:none}
+.hdate{color:#bbb}
+.badge{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600}
+.b-green{background:var(--ok-light);color:var(--ok)}.b-amber{background:var(--warn-light);color:var(--warn)}.b-red{background:var(--danger-light);color:var(--danger)}
+.add-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;font-size:13px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;color:var(--text-sub);font-weight:500}
+.add-btn:hover{background:#f5f5f5}
+.met-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.met{background:#f4f4f2;border-radius:8px;padding:14px}
+.met-l{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.met-v{font-size:24px;font-weight:800}
+.refund-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.refund-row:last-child{border:none}
+.acc-table{width:100%;border-collapse:collapse;font-size:13px}
+.acc-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.04em;border-bottom:1px solid var(--border)}
+.acc-table td{padding:8px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.acc-table tr:last-child td{border:none}
+.acc-table input{padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);width:100%}
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:var(--card);border-radius:14px;padding:1.5rem;width:340px;max-width:92vw;border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,.15)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:1rem}
+.frow{margin-bottom:12px}
+.frow label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:500}
+.frow input,.frow select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card);color:var(--text)}
+.mactions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.note{font-size:11px;color:var(--text-muted);line-height:1.6;margin-top:8px}
+.settings-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.settings-card h3{font-size:14px;font-weight:700;margin-bottom:12px}
+/* Student mode */
+.stu-wrap{max-width:480px;margin:0 auto;padding:1.5rem 1rem}
+.stu-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
+.stu-title{font-size:15px;font-weight:800;color:var(--accent)}
+.stu-name{font-size:24px;font-weight:800;margin-bottom:3px}
+.stu-lv{font-size:13px;color:var(--text-muted);margin-bottom:1.25rem}
+.alert-box{border-radius:9px;padding:12px 16px;font-size:13px;font-weight:500;margin-bottom:12px}
+.alert-warn{background:var(--warn-light);border:1px solid #f0c060;color:#7a4a00}
+.alert-danger{background:var(--danger-light);border:1px solid #f5a0a0;color:#7a2020}
+.big-ticket{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem 1.5rem;margin-bottom:1rem;text-align:center;box-shadow:0 2px 12px rgba(44,95,138,.07)}
+.big-num{font-size:72px;font-weight:900;line-height:1;color:var(--accent)}
+.big-label{font-size:15px;color:var(--text-muted);margin-top:4px}
+.big-total{font-size:13px;color:#ccc;margin-top:2px}
+.stu-dots{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:1.25rem 0 0}
+.stu-dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.stu-dot-rem{background:var(--accent);color:#fff}.stu-dot-used{background:#f0f0f0;color:#ccc}
+.stu-expiry{padding:12px 16px;border-radius:9px;font-size:13px;font-weight:600;text-align:center;margin-top:.75rem}
+.stu-purchased{font-size:12px;color:var(--text-muted);text-align:center;margin-top:8px}
+.stu-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1rem}
+.stu-section h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.stu-section .frow{margin-bottom:10px}
+.stu-section .frow label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:3px}
+.stu-section .frow input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);color:var(--text)}
+.save-result{font-size:12px;margin-top:8px;min-height:16px}
+.save-ok{color:var(--ok)}.save-err{color:var(--danger)}
+</style>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;color:#2C5F8A;font-size:15px;font-weight:600;">🎹 読み込み中...</div></div>
+<div id="modal"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCgJa8KYm5NT2m-7Wxmz_QNLqjEvjEtS-4",
+  authDomain: "piano-ticket.firebaseapp.com",
+  databaseURL: "https://piano-ticket-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "piano-ticket",
+  storageBucket: "piano-ticket.firebasestorage.app",
+  messagingSenderId: "143704902393",
+  appId: "1:143704902393:web:bbbc6d3fe6bdd7e17b3028"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+const dataRef = ref(db, 'pianoTicket');
+
+// Firebase への書き込み（グローバルに公開）
+window._fbSave = (stateObj) => {
+  set(dataRef, stateObj).catch(e => console.error('Firebase save error:', e));
+};
+
+// Firebase からリアルタイム受信 → アプリ初期化
+onValue(dataRef, (snapshot) => {
+  const val = snapshot.val();
+  if (val) {
+    // すでにアプリ起動済みの場合はステートだけ更新して再描画
+    if (window._appReady) {
+      window._onFirebaseData(val);
+    } else {
+      window._initialData = val;
+      window._appReady = true;
+      window._startApp();
+    }
+  } else {
+    // Firebaseにデータがない場合はデフォルトデータで初期化
+    window._appReady = true;
+    window._startApp();
+  }
+}, (error) => {
+  console.error('Firebase read error:', error);
+  // オフライン時はlocalStorageフォールバック
+  window._appReady = true;
+  window._startApp();
+});
+</script>
+
+<script>
+const TEACHER_PW_KEY='ptv3_teacherPW';
+function getTPW(){return localStorage.getItem(TEACHER_PW_KEY)||'teacher123'}
+function setTPW(v){localStorage.setItem(TEACHER_PW_KEY,v)}
+
+const LEVELS={
+  'バイエル':      {label:'バイエル程度（45分）',   total:5, home:{price:11000,refundPer:2200}, visit:null},
+  'ブルグミュラー':{label:'ブルグミュラー程度（45分）',total:5, home:{price:13200,refundPer:2640}, visit:{price:14300,refundPer:2860}},
+  'ソナチネ':      {label:'ソナチネ以上（50分）',   total:4, home:{price:12100,refundPer:3025}, visit:{price:13200,refundPer:3300}}
+};
+// 後方互換：旧データの refundPer を参照している箇所向けのヘルパー
+function getRefundPer(s){
+  const lv=LEVELS[s.level];
+  if(!lv) return 0;
+  const vt=s.visitType==='出張'?'visit':'home';
+  return (lv[vt]||lv.home).refundPer;
+}
+
+const DEFAULT_STATE = {
+  students:[
+    {id:1,name:'田中 さくら',loginId:'sakura',loginPw:'1234',level:'バイエル',tickets:3,purchased:'2025-01-10',
+     history:[{date:'2025年1月10日',type:'購入',delta:5},{date:'2025年1月18日',type:'レッスン',delta:-1},{date:'2025年2月1日',type:'レッスン',delta:-1}]},
+    {id:2,name:'鈴木 はると',loginId:'haruto',loginPw:'1234',level:'ブルグミュラー',tickets:1,purchased:'2025-01-05',
+     history:[{date:'2025年1月5日',type:'購入',delta:5},{date:'2025年1月26日',type:'レッスン',delta:-1},{date:'2025年2月9日',type:'レッスン',delta:-1},{date:'2025年3月2日',type:'レッスン',delta:-1},{date:'2025年3月30日',type:'レッスン',delta:-1}]},
+    {id:3,name:'高橋 みお',loginId:'mio',loginPw:'1234',level:'ソナチネ',tickets:4,purchased:'2025-02-01',
+     history:[{date:'2025年2月1日',type:'購入',delta:4}]}
+  ],
+  nextId:4
+};
+
+let state = DEFAULT_STATE;
+let mode=null,selectedId=null,currentTab='list',studentUser=null;
+let _suppressRemoteUpdate = false; // 自分の書き込みによる再描画を防ぐフラグ
+
+// Firebase保存（常にFirebaseへ、ローカルはパスワードのみ）
+function save(){
+  _suppressRemoteUpdate = true;
+  if(window._fbSave) window._fbSave(JSON.parse(JSON.stringify(state)));
+  setTimeout(()=>{ _suppressRemoteUpdate = false; }, 1500);
+}
+
+// Firebaseからデータ受信時の処理（他端末の変更を反映）
+window._onFirebaseData = function(val){
+  if(_suppressRemoteUpdate) return;
+  state = val;
+  // ログイン中の生徒情報を更新
+  if(mode==='student' && studentUser){
+    const updated = state.students.find(x=>x.id===studentUser.id);
+    if(updated) studentUser = updated;
+  }
+  render();
+};
+
+// アプリ起動（Firebaseデータ受信後に呼ばれる）
+window._startApp = function(){
+  if(window._initialData){
+    state = window._initialData;
+  }
+  render();
+};
+
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function todayJP(){return new Date().toLocaleDateString('ja-JP')}
+function isoToJP(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return`${y}年${parseInt(m)}月${parseInt(d)}日`}
+function daysLeft(p){if(!p)return 999;const e=new Date(p);e.setFullYear(e.getFullYear()+1);return Math.ceil((e-new Date())/86400000)}
+function expiryInfo(s){
+  const d=daysLeft(s.purchased);
+  const e=new Date(s.purchased);e.setFullYear(e.getFullYear()+1);
+  const es=e.toLocaleDateString('ja-JP');
+  if(d<0)   return{cls:'expiry-danger',text:'有効期限切れ'};
+  if(d<=30) return{cls:'expiry-danger',text:`有効期限まで残り${d}日（${es}）`};
+  if(d<=60) return{cls:'expiry-warn',  text:`有効期限まで残り${d}日（${es}）`};
+  return         {cls:'expiry-ok',    text:`有効期限：${es}`};
+}
+function barCls(t,mx){const r=t/mx;return r<=0.25?'bar-danger':r<=0.5?'bar-warn':'bar-ok'}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function render(){
+  if(!mode){renderLogin();return}
+  if(mode==='teacher'){renderTeacher();return}
+  renderStudent();
+}
+
+/* LOGIN */
+function renderLogin(){
+  document.getElementById('root').innerHTML=`
+<div class="screen"><div class="login-wrap">
+  <div class="login-logo">🎹 Piano Ticket<span>チケット管理システム</span></div>
+  <div class="login-card">
+    <h2>ログイン</h2>
+    <div class="mode-btns">
+      <button class="mode-btn active" id="btn-t" onclick="setLM('teacher')">講師</button>
+      <button class="mode-btn" id="btn-s" onclick="setLM('student')">生徒</button>
+    </div>
+    <div id="lf"><input class="fi" type="password" id="lp" placeholder="パスワード" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="login-btn" onclick="doLogin()">ログイン</button>
+    <div class="login-err" id="le"></div>
+  </div>
+</div></div>`;
+  window._lm='teacher';
+}
+function setLM(m){
+  window._lm=m;
+  document.getElementById('btn-t').className='mode-btn'+(m==='teacher'?' active':'');
+  document.getElementById('btn-s').className='mode-btn'+(m==='student'?' active':'');
+  document.getElementById('lf').innerHTML=m==='teacher'
+    ?`<input class="fi" type="password" id="lp" placeholder="パスワード" onkeydown="if(event.key==='Enter')doLogin()">`
+    :`<input class="fi" type="text" id="li" placeholder="ログインID" onkeydown="if(event.key==='Enter')doLogin()">
+      <input class="fi" type="password" id="lp" placeholder="パスワード" onkeydown="if(event.key==='Enter')doLogin()">`;
+  document.getElementById('le').textContent='';
+}
+function doLogin(){
+  const m=window._lm,pw=document.getElementById('lp').value;
+  if(m==='teacher'){
+    if(pw===getTPW()){mode='teacher';selectedId=null;currentTab='list';render();return}
+    document.getElementById('le').textContent='パスワードが違います';return;
+  }
+  const lid=(document.getElementById('li')||{}).value||'';
+  const s=state.students.find(x=>x.loginId===lid&&x.loginPw===pw);
+  if(s){mode='student';studentUser=s;render();return}
+  document.getElementById('le').textContent='ログインIDまたはパスワードが違います';
+}
+
+/* TEACHER */
+function renderTeacher(){
+  let c='';
+  if(currentTab==='list')     c=buildList();
+  else if(currentTab==='history')  c=buildAllHist();
+  else if(currentTab==='summary')  c=buildSummary();
+  else if(currentTab==='accounts') c=buildAccounts();
+  else if(currentTab==='settings') c=buildSettings();
+  document.getElementById('root').innerHTML=`
+<div class="screen">
+  <div class="teacher-header">
+    <div class="app-title">🎹 Piano Ticket<span class="mode-badge">講師モード</span></div>
+    <button class="logout-btn" onclick="logout()">ログアウト</button>
+  </div>
+  <div class="tabs">
+    <button class="tab ${currentTab==='list'?'active':''}" onclick="sw('list')">生徒一覧</button>
+    <button class="tab ${currentTab==='history'?'active':''}" onclick="sw('history')">履歴</button>
+    <button class="tab ${currentTab==='summary'?'active':''}" onclick="sw('summary')">集計</button>
+    <button class="tab ${currentTab==='accounts'?'active':''}" onclick="sw('accounts')">アカウント</button>
+    <button class="tab ${currentTab==='settings'?'active':''}" onclick="sw('settings')">設定</button>
+  </div>
+  <div>${c}</div>
+</div>`;
+}
+function sw(t){currentTab=t;renderTeacher()}
+
+function buildList(){
+  const cards=state.students.map(s=>{
+    const lv=LEVELS[s.level],pct=Math.round(s.tickets/lv.total*100),bc=barCls(s.tickets,lv.total);
+    return`<div class="s-card${selectedId===s.id?' sel':''}" onclick="sel(${s.id})">
+      <div class="s-nm">${esc(s.name)}</div>
+      <div class="s-lid">ID: ${esc(s.loginId)}</div>
+      <div class="s-lv">${lv.label}</div>
+      <div class="bar-wrap"><div class="bar-fill ${bc}" style="width:${pct}%"></div></div>
+      <div class="s-cnt"><b>${s.tickets}</b> / ${lv.total}回 残り</div>
+    </div>`;
+  }).join('');
+  let det='';
+  if(selectedId){const s=state.students.find(x=>x.id===selectedId);if(s)det=buildDet(s)}
+  return`<div class="s-grid">${cards||'<p style="color:#aaa;font-size:13px;">生徒がいません</p>'}</div>
+  <button class="add-btn" onclick="openAdd()">＋ 生徒を追加</button>${det}`;
+}
+
+function buildDet(s){
+  const lv=LEVELS[s.level];
+  const dots=Array.from({length:lv.total},(_,i)=>
+    `<div class="dot ${i<s.tickets?'dot-rem':'dot-used'}">${i<s.tickets?i+1:'✓'}</div>`).join('');
+  const ex=expiryInfo(s);
+  const hist=[...s.history].reverse().slice(0,8).map(h=>{
+    const b=h.type==='購入'?'b-green':h.type==='返金'?'b-red':'b-amber';
+    const noteStr=h.note?`<span style="color:#aaa;font-size:11px">${esc(h.note)}</span>`:'';
+    return`<div class="hrow"><span class="hdate">${h.date}</span><span class="badge ${b}">${h.type}</span>${noteStr}<span>${h.delta>0?'+'+h.delta:h.delta}回</span></div>`;
+  }).join('');
+  return`<div class="det">
+    <div class="det-head">
+      <div>
+        <div class="det-nm">${esc(s.name)}</div>
+        <div class="det-sub">${lv.label}　${s.visitType||'講師宅'}レッスン　ログインID: ${esc(s.loginId)}</div>
+      </div>
+      <button class="abtn abtn-danger abtn-sm" onclick="delStu(${s.id})">削除</button>
+    </div>
+    <div class="hlabel">チケット残数</div>
+    <div class="dots">${dots}</div>
+    <div class="expiry ${ex.cls}">${ex.text}</div>
+
+    <div class="purchased-row">
+      <div class="hlabel">チケット購入日（＝1回目のレッスン日）</div>
+      <div class="purchased-current">現在の設定：${isoToJP(s.purchased)||'未設定'}</div>
+      <div class="date-edit-row">
+        <input type="date" id="pd-${s.id}" value="${s.purchased||''}">
+        <button class="abtn abtn-sm abtn-primary" onclick="savePD(${s.id})">保存</button>
+        <span id="pd-msg-${s.id}" style="font-size:12px;color:var(--ok)"></span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="abtn abtn-primary" onclick="useT(${s.id})">レッスン実施 −1</button>
+      <button class="abtn" onclick="buyT(${s.id})">チケット購入 +${lv.total}</button>
+      ${s.tickets>0?`<button class="abtn abtn-warn" onclick="refund(${s.id})">返金処理</button>`:''}
+    </div>
+    ${hist?`<div class="hist"><div class="hlabel">直近の記録</div>${hist}</div>`:''}
+  </div>`;
+}
+
+function savePD(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const v=document.getElementById('pd-'+id).value;
+  if(!v){alert('日付を選択してください');return}
+  s.purchased=v;save();
+  const msg=document.getElementById('pd-msg-'+id);
+  if(msg){msg.textContent='保存しました ✓';setTimeout(()=>{renderTeacher()},800)}
+}
+
+function buildAllHist(){
+  const all=[];
+  state.students.forEach(s=>s.history.forEach(h=>all.push({...h,name:s.name})));
+  all.sort((a,b)=>b.date.localeCompare(a.date));
+  if(!all.length)return'<p style="color:#aaa;font-size:13px;padding:1rem 0">記録がありません</p>';
+  return all.map(h=>{
+    const b=h.type==='購入'?'b-green':h.type==='返金'?'b-red':'b-amber';
+    return`<div class="hrow"><span class="hdate">${h.date}</span><span style="color:#333;min-width:80px">${esc(h.name)}</span><span class="badge ${b}">${h.type}</span><span>${h.delta>0?'+'+h.delta:h.delta}回</span></div>`;
+  }).join('');
+}
+
+function buildSummary(){
+  const total=state.students.length;
+  const lessons=state.students.reduce((a,s)=>a+s.history.filter(h=>h.type==='レッスン').length,0);
+  const low=state.students.filter(s=>s.tickets<=1).length;
+  const refunds=state.students.map(s=>{
+    const rp=getRefundPer(s),amt=s.tickets*rp;
+    const vtLabel=s.visitType?`・${s.visitType}`:'';
+    return`<div class="refund-row"><span>${esc(s.name)}</span><span style="color:#aaa">${s.level}${vtLabel}</span><span>残${s.tickets}回 → ¥${amt.toLocaleString()}</span></div>`;
+  }).join('');
+  return`<div class="met-grid">
+    <div class="met"><div class="met-l">生徒数</div><div class="met-v">${total}人</div></div>
+    <div class="met"><div class="met-l">累計レッスン</div><div class="met-v">${lessons}回</div></div>
+    <div class="met"><div class="met-l">残り1回以下</div><div class="met-v">${low}人</div></div>
+  </div>
+  <div class="hlabel" style="margin-bottom:8px">返金計算（残数×単価）</div>
+  ${refunds||'<p style="color:#aaa;font-size:13px">生徒がいません</p>'}`;
+}
+
+function buildAccounts(){
+  const rows=state.students.map(s=>`<tr>
+    <td style="white-space:nowrap">${esc(s.name)}</td>
+    <td><input id="al-${s.id}" value="${esc(s.loginId)}"></td>
+    <td><input id="ap-${s.id}" value="${esc(s.loginPw)}"></td>
+    <td><button class="abtn abtn-sm abtn-primary" onclick="saveAcc(${s.id})">保存</button></td>
+  </tr>`).join('');
+  return`<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">生徒ごとのログインID・パスワードを管理します。</p>
+  <table class="acc-table">
+    <thead><tr><th>名前</th><th>ログインID</th><th>パスワード</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="4" style="color:#aaa;padding:12px 10px">生徒がいません</td></tr>'}</tbody>
+  </table>
+  <div id="acc-msg" style="font-size:12px;color:var(--ok);margin-top:10px;min-height:16px"></div>
+  <p class="note" style="margin-top:12px">※ 生徒のログインID・パスワードは生徒側からも変更できます。変更は即時反映されます。</p>`;
+}
+function saveAcc(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const nl=(document.getElementById('al-'+id).value||'').trim();
+  const np=(document.getElementById('ap-'+id).value||'').trim();
+  if(!nl){alert('ログインIDを入力してください');return}
+  if(!np){alert('パスワードを入力してください');return}
+  if(state.students.some(x=>x.id!==id&&x.loginId===nl)){alert('そのログインIDはすでに使われています');return}
+  s.loginId=nl;s.loginPw=np;save();
+  const msg=document.getElementById('acc-msg');
+  if(msg){msg.textContent=`${s.name} のアカウントを保存しました ✓`;setTimeout(()=>{if(msg)msg.textContent=''},2500)}
+}
+
+function buildSettings(){
+  return`<div class="settings-card">
+    <h3>講師パスワードの変更</h3>
+    <div class="frow"><label>現在のパスワード</label><input id="ct" type="password"></div>
+    <div class="frow"><label>新しいパスワード</label><input id="nt" type="password"></div>
+    <div class="frow"><label>新しいパスワード（確認）</label><input id="nt2" type="password"></div>
+    <button class="abtn abtn-primary" onclick="changeTPW()">変更する</button>
+    <div id="tpw-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+    <p class="note" style="margin-top:12px">※ 生徒のパスワードは「アカウント」タブで管理してください。</p>
+  </div>`;
+}
+function changeTPW(){
+  const cur=document.getElementById('ct').value,nw=document.getElementById('nt').value,nw2=document.getElementById('nt2').value;
+  const msg=document.getElementById('tpw-msg');
+  if(cur!==getTPW()){msg.style.color='var(--danger)';msg.textContent='現在のパスワードが違います';return}
+  if(!nw){msg.style.color='var(--danger)';msg.textContent='新しいパスワードを入力してください';return}
+  if(nw!==nw2){msg.style.color='var(--danger)';msg.textContent='確認パスワードが一致しません';return}
+  setTPW(nw);msg.style.color='var(--ok)';msg.textContent='パスワードを変更しました ✓';
+}
+
+function sel(id){selectedId=selectedId===id?null:id;renderTeacher()}
+function useT(id){
+  const s=state.students.find(x=>x.id===id);
+  if(!s||s.tickets<=0){alert('チケットがありません');return}
+  s.tickets--;s.history.push({date:todayJP(),type:'レッスン',delta:-1});save();renderTeacher();
+}
+function buyT(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const curVt=s.visitType||'講師宅';
+  document.getElementById('modal').innerHTML=`<div class="backdrop" onclick="cm(event)">
+    <div class="modal">
+      <h3>チケット購入</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">${esc(s.name)} さん</p>
+      <div class="frow"><label>レベル（進級する場合は変更してください）</label>
+        <select id="buy-lv" onchange="updateBuyPreview()">
+          <option value="バイエル" ${s.level==='バイエル'?'selected':''}>バイエル程度（45分 / 5回）</option>
+          <option value="ブルグミュラー" ${s.level==='ブルグミュラー'?'selected':''}>ブルグミュラー程度（45分 / 5回）</option>
+          <option value="ソナチネ" ${s.level==='ソナチネ'?'selected':''}>ソナチネ以上（50分 / 4回）</option>
+        </select>
+      </div>
+      <div class="frow"><label>レッスン種別</label>
+        <select id="buy-vt" onchange="updateBuyPreview()">
+          <option value="講師宅" ${curVt==='講師宅'?'selected':''}>講師宅レッスン</option>
+          <option value="出張" ${curVt==='出張'?'selected':''}>出張レッスン</option>
+        </select>
+      </div>
+      <div id="buy-preview" style="background:#f4f8fc;border:1px solid #cde;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:4px;line-height:1.8"></div>
+      <p class="note" style="margin-top:10px">※ チケット購入日は本日の日付で記録されます。後から変更できます。</p>
+      <div class="mactions">
+        <button class="abtn" onclick="cmc()">キャンセル</button>
+        <button class="abtn abtn-primary" onclick="confirmBuyT(${id})">購入を記録</button>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(updateBuyPreview,0);
+}
+function updateBuyPreview(){
+  const lvKey=document.getElementById('buy-lv')?.value;
+  const vt=document.getElementById('buy-vt')?.value;
+  const prev=document.getElementById('buy-preview');
+  if(!lvKey||!vt||!prev)return;
+  const lv=LEVELS[lvKey];
+  const noVisit=vt==='出張'&&!lv.visit;
+  const priceInfo=noVisit?lv.home:(vt==='出張'?lv.visit:lv.home);
+  const warn=noVisit?' ⚠️ このレベルに出張レッスンはありません':'';
+  prev.innerHTML=`<b>${lv.label}</b>　${vt}レッスン${warn}<br>回数：<b>${lv.total}回</b>　／　料金：<b>¥${priceInfo.price.toLocaleString()}</b><br>返金単価：¥${priceInfo.refundPer.toLocaleString()} / 回`;
+}
+function confirmBuyT(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const newLvKey=document.getElementById('buy-lv').value;
+  const vt=document.getElementById('buy-vt').value;
+  const lv=LEVELS[newLvKey];
+  if(vt==='出張'&&!lv.visit){alert('バイエル程度には出張レッスンがありません');return}
+  const prevLevel=s.level;
+  s.level=newLvKey;s.visitType=vt;
+  s.tickets+=lv.total;s.purchased=todayISO();
+  const lvNote=prevLevel!==newLvKey?`（${prevLevel}→${newLvKey}）`:'';
+  s.history.push({date:todayJP(),type:'購入',delta:lv.total,note:`${newLvKey}・${vt}${lvNote}`});
+  save();cmc();renderTeacher();
+}
+function refund(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const rp=getRefundPer(s),amt=s.tickets*rp;
+  if(confirm(`${s.name} さん\n残り${s.tickets}回 × ¥${rp.toLocaleString()} = ¥${amt.toLocaleString()}\n返金処理を行いますか？`)){
+    s.history.push({date:todayJP(),type:'返金',delta:-s.tickets});s.tickets=0;save();renderTeacher();
+  }
+}
+function delStu(id){
+  if(!confirm('この生徒を削除しますか？'))return;
+  state.students=state.students.filter(x=>x.id!==id);selectedId=null;save();renderTeacher();
+}
+function openAdd(){
+  document.getElementById('modal').innerHTML=`<div class="backdrop" onclick="cm(event)">
+    <div class="modal">
+      <h3>生徒を追加</h3>
+      <div class="frow"><label>名前</label><input id="mn" placeholder="山田 はな"></div>
+      <div class="frow"><label>レベル</label>
+        <select id="ml" onchange="updateAddPreview()">
+          <option value="バイエル">バイエル程度（45分 / 5回）</option>
+          <option value="ブルグミュラー">ブルグミュラー程度（45分 / 5回）</option>
+          <option value="ソナチネ">ソナチネ以上（50分 / 4回）</option>
+        </select>
+      </div>
+      <div class="frow"><label>レッスン種別</label>
+        <select id="mvt" onchange="updateAddPreview()">
+          <option value="講師宅">講師宅レッスン</option>
+          <option value="出張">出張レッスン</option>
+        </select>
+      </div>
+      <div id="add-preview" style="background:#f4f8fc;border:1px solid #cde;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:4px;line-height:1.8"></div>
+      <div class="frow" style="margin-top:12px"><label>ログインID</label><input id="ml2" placeholder="例：hanayamada"></div>
+      <div class="frow"><label>初期パスワード</label><input id="mp" value="1234"></div>
+      <p class="note">チケット購入日は追加後に「生徒一覧」から変更できます。</p>
+      <div class="mactions">
+        <button class="abtn" onclick="cmc()">キャンセル</button>
+        <button class="abtn abtn-primary" onclick="confirmAdd()">追加</button>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(updateAddPreview, 0);
+}
+function updateAddPreview(){
+  const lvKey=document.getElementById('ml')?.value;
+  const vt=document.getElementById('mvt')?.value;
+  const prev=document.getElementById('add-preview');
+  if(!lvKey||!vt||!prev)return;
+  const lv=LEVELS[lvKey];
+  const noVisit=vt==='出張'&&!lv.visit;
+  const priceInfo=noVisit?lv.home:(vt==='出張'?lv.visit:lv.home);
+  const warn=noVisit?' ⚠️ このレベルに出張レッスンはありません':'';
+  prev.innerHTML=`<b>${lv.label}</b>　${vt}レッスン${warn}<br>回数：<b>${lv.total}回</b>　／　料金：<b>¥${priceInfo.price.toLocaleString()}</b><br>返金単価：¥${priceInfo.refundPer.toLocaleString()} / 回`;
+}
+function cm(e){if(e.target.classList.contains('backdrop'))cmc()}
+function cmc(){document.getElementById('modal').innerHTML=''}
+function confirmAdd(){
+  const name=(document.getElementById('mn').value||'').trim();
+  const level=document.getElementById('ml').value;
+  const vt=document.getElementById('mvt').value;
+  const lid=(document.getElementById('ml2').value||'').trim();
+  const lpw=(document.getElementById('mp').value||'').trim();
+  if(!name){alert('名前を入力してください');return}
+  if(!lid){alert('ログインIDを入力してください');return}
+  if(!lpw){alert('パスワードを入力してください');return}
+  if(state.students.some(x=>x.loginId===lid)){alert('そのログインIDはすでに使われています');return}
+  const lv=LEVELS[level];
+  if(vt==='出張'&&!lv.visit){alert('バイエル程度には出張レッスンがありません');return}
+  state.students.push({id:state.nextId++,name,loginId:lid,loginPw:lpw,level,visitType:vt,tickets:lv.total,purchased:todayISO(),
+    history:[{date:todayJP(),type:'購入',delta:lv.total,note:`${level}・${vt}`}]});
+  save();cmc();renderTeacher();
+}
+
+/* STUDENT */
+function renderStudent(){
+  const s=state.students.find(x=>x.id===studentUser.id);
+  if(!s){
+    document.getElementById('root').innerHTML=`<div class="stu-wrap">
+      <div class="stu-header"><div class="stu-title">🎹 Piano Ticket</div>
+      <button class="logout-btn" onclick="logout()">ログアウト</button></div>
+      <p style="color:#aaa">生徒情報が見つかりません</p></div>`;return;
+  }
+  studentUser=s;
+  const lv=LEVELS[s.level],ex=expiryInfo(s),d=daysLeft(s.purchased);
+  const dots=Array.from({length:lv.total},(_,i)=>
+    `<div class="stu-dot ${i<s.tickets?'stu-dot-rem':'stu-dot-used'}">${i<s.tickets?i+1:'✓'}</div>`).join('');
+  let alerts='';
+  if(d<0)        alerts+=`<div class="alert-box alert-danger">⚠️ チケットの有効期限が切れています。講師にご連絡ください。</div>`;
+  else if(d<=30) alerts+=`<div class="alert-box alert-danger">⚠️ 有効期限まで残り${d}日です。次回のご購入をご検討ください。</div>`;
+  else if(d<=60) alerts+=`<div class="alert-box alert-warn">有効期限まで残り${d}日です。</div>`;
+  if(s.tickets===0)      alerts+=`<div class="alert-box alert-danger">チケットがありません。次のチケットをご購入ください。</div>`;
+  else if(s.tickets===1) alerts+=`<div class="alert-box alert-danger">⚠️ チケットの残りが1回になりました。</div>`;
+
+  document.getElementById('root').innerHTML=`
+<div class="stu-wrap">
+  <div class="stu-header">
+    <div class="stu-title">🎹 Piano Ticket</div>
+    <button class="logout-btn" onclick="logout()">ログアウト</button>
+  </div>
+  <div class="stu-name">${esc(s.name)} さん</div>
+  <div class="stu-lv">${lv.label}</div>
+  ${alerts}
+  <div class="big-ticket">
+    <div class="big-num">${s.tickets}</div>
+    <div class="big-label">チケット残り回数</div>
+    <div class="big-total">/ ${lv.total}回</div>
+    <div class="stu-dots">${dots}</div>
+  </div>
+  <div class="stu-expiry ${ex.cls}">${ex.text}</div>
+  ${s.purchased?`<div class="stu-purchased">チケット購入日：${isoToJP(s.purchased)}</div>`:''}
+
+  <div class="stu-section">
+    <h3>ログイン情報の変更</h3>
+    <div class="frow"><label>新しいログインID（現在：${esc(s.loginId)}）</label>
+      <input id="nl" type="text" placeholder="変更する場合のみ入力"></div>
+    <div class="frow"><label>新しいパスワード</label>
+      <input id="np" type="password" placeholder="変更する場合のみ入力"></div>
+    <div class="frow"><label>新しいパスワード（確認）</label>
+      <input id="np2" type="password" placeholder="確認用"></div>
+    <button class="abtn abtn-primary" onclick="saveStuAcc()">変更を保存</button>
+    <div class="save-result" id="sa-msg"></div>
+  </div>
+</div>`;
+}
+
+function saveStuAcc(){
+  const s=state.students.find(x=>x.id===studentUser.id);
+  const msg=document.getElementById('sa-msg');
+  const nl=(document.getElementById('nl').value||'').trim();
+  const np=document.getElementById('np').value;
+  const np2=document.getElementById('np2').value;
+  if(!nl&&!np){msg.className='save-result save-err';msg.textContent='変更する項目を入力してください';return}
+  if(nl){
+    if(state.students.some(x=>x.id!==s.id&&x.loginId===nl)){msg.className='save-result save-err';msg.textContent='そのIDはすでに使われています';return}
+    s.loginId=nl;
+  }
+  if(np){
+    if(np!==np2){msg.className='save-result save-err';msg.textContent='パスワードが一致しません';return}
+    s.loginPw=np;
+  }
+  studentUser=s;save();
+  msg.className='save-result save-ok';
+  msg.textContent='保存しました ✓　次回からは新しい情報でログインしてください。';
+}
+
+function logout(){mode=null;selectedId=null;studentUser=null;render()}
+// アプリはFirebase接続後に _startApp() → render() で起動します
+</script>
+</body>
+</html>
