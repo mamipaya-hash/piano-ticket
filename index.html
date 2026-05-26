@@ -127,6 +127,12 @@ body{font-family:'Hiragino Kline','Hiragino Sans','Yu Gothic',sans-serif;font-si
 .stu-section .frow input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);color:var(--text)}
 .save-result{font-size:12px;margin-top:8px;min-height:16px}
 .save-ok{color:var(--ok)}.save-err{color:var(--danger)}
+/* 未収バッジ */
+.unpaid-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:#fff0c0;border:1px solid #e0b800;color:#7a5c00;letter-spacing:.03em}
+.unpaid-badge-lg{font-size:13px;padding:6px 14px;border-radius:8px;background:#fff0c0;border:1px solid #e0b800;color:#7a5c00;font-weight:700;display:inline-block;margin-top:6px}
+.unpaid-row{margin-top:10px;padding:10px 12px;background:#fffce8;border-radius:8px;border:1px solid #e8d800}
+.receipt-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px}
+.receipt-row input[type=date]{padding:6px 9px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);color:var(--text)}
 </style>
 </head>
 <body>
@@ -335,7 +341,7 @@ function buildList(){
   const cards=state.students.map(s=>{
     const lv=LEVELS[s.level],pct=Math.round(s.tickets/lv.total*100),bc=barCls(s.tickets,lv.total);
     return`<div class="s-card${selectedId===s.id?' sel':''}" onclick="sel(${s.id})">
-      <div class="s-nm">${esc(s.name)}</div>
+      <div class="s-nm">${esc(s.name)}${s.unpaid?` <span class="unpaid-badge">未収</span>`:''}</div>
       <div class="s-lid">ID: ${esc(s.loginId)}</div>
       <div class="s-lv">${lv.label}</div>
       <div class="bar-wrap"><div class="bar-fill ${bc}" style="width:${pct}%"></div></div>
@@ -369,8 +375,21 @@ function buildDet(s){
     <div class="hlabel">チケット残数</div>
     <div class="dots">${dots}</div>
     <div class="expiry ${ex.cls}">${ex.text}</div>
+    ${s.unpaid?`<div class="unpaid-badge-lg">💰 未収　― レッスン費が未収です</div>`:''}
 
-    <div class="purchased-row">
+    <div class="unpaid-row">
+      <div class="hlabel" style="margin-bottom:4px">レッスン費の収納状況</div>
+      ${s.unpaid
+        ? `<div style="font-size:13px;color:#7a5c00;margin-bottom:8px">現在：<b>未収</b></div>
+           <div class="hlabel" style="margin-bottom:4px">領収日（初回レッスン日）を入力して領収済みに変更</div>
+           <div class="receipt-row">
+             <input type="date" id="receipt-date-${s.id}" value="${s.purchased||''}">
+             <button class="abtn abtn-sm abtn-primary" onclick="markReceived(${s.id})">領収済みにする</button>
+           </div>`
+        : `<div style="font-size:13px;color:var(--ok);margin-bottom:6px">✅ 領収済み</div>
+           <button class="abtn abtn-sm abtn-warn" onclick="toggleUnpaid(${s.id})">未収に変更</button>`
+      }
+    </div>
       <div class="hlabel">チケット購入日（＝1回目のレッスン日）</div>
       <div class="purchased-current">現在の設定：${isoToJP(s.purchased)||'未設定'}</div>
       <div class="date-edit-row">
@@ -396,6 +415,22 @@ function savePD(id){
   s.purchased=v;save();
   const msg=document.getElementById('pd-msg-'+id);
   if(msg){msg.textContent='保存しました ✓';setTimeout(()=>{renderTeacher()},800)}
+}
+function markReceived(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const v=document.getElementById('receipt-date-'+id).value;
+  if(!v){alert('領収日（初回レッスン日）を選択してください');return}
+  s.unpaid=false;
+  s.purchased=v;
+  s.history.push({date:todayJP(),type:'領収',delta:0,note:'未収→領収済み'});
+  save();renderTeacher();
+}
+function toggleUnpaid(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  if(!confirm(`${s.name} さんを「未収」に変更しますか？`))return;
+  s.unpaid=true;
+  s.history.push({date:todayJP(),type:'未収',delta:0,note:'未収に変更'});
+  save();renderTeacher();
 }
 
 function buildAllHist(){
@@ -501,6 +536,10 @@ function buyT(id){
         </select>
       </div>
       <div id="buy-preview" style="background:#f4f8fc;border:1px solid #cde;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:4px;line-height:1.8"></div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:8px;font-size:13px">
+        <input type="checkbox" id="buy-unpaid" style="width:16px;height:16px;cursor:pointer">
+        <label for="buy-unpaid" style="cursor:pointer;color:var(--text)">未収で発行する</label>
+      </div>
       <p class="note" style="margin-top:10px">※ チケット購入日は本日の日付で記録されます。後から変更できます。</p>
       <div class="mactions">
         <button class="abtn" onclick="cmc()">キャンセル</button>
@@ -527,8 +566,10 @@ function confirmBuyT(id){
   const vt=document.getElementById('buy-vt').value;
   const lv=LEVELS[newLvKey];
   if(vt==='出張'&&!lv.visit){alert('バイエル程度には出張レッスンがありません');return}
+  const isUnpaid=document.getElementById('buy-unpaid')?.checked||false;
   const prevLevel=s.level;
   s.level=newLvKey;s.visitType=vt;
+  s.unpaid=isUnpaid;
   s.tickets+=lv.total;s.purchased=todayISO();
   const lvNote=prevLevel!==newLvKey?`（${prevLevel}→${newLvKey}）`:'';
   s.history.push({date:todayJP(),type:'購入',delta:lv.total,note:`${newLvKey}・${vt}${lvNote}`});
@@ -566,6 +607,10 @@ function openAdd(){
       <div id="add-preview" style="background:#f4f8fc;border:1px solid #cde;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:4px;line-height:1.8"></div>
       <div class="frow" style="margin-top:12px"><label>ログインID</label><input id="ml2" placeholder="例：hanayamada"></div>
       <div class="frow"><label>初期パスワード</label><input id="mp" value="1234"></div>
+      <div style="margin-top:4px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:13px">
+        <input type="checkbox" id="add-unpaid" style="width:16px;height:16px;cursor:pointer">
+        <label for="add-unpaid" style="cursor:pointer;color:var(--text)">未収で発行する</label>
+      </div>
       <p class="note">チケット購入日は追加後に「生徒一覧」から変更できます。</p>
       <div class="mactions">
         <button class="abtn" onclick="cmc()">キャンセル</button>
@@ -600,8 +645,9 @@ function confirmAdd(){
   if(state.students.some(x=>x.loginId===lid)){alert('そのログインIDはすでに使われています');return}
   const lv=LEVELS[level];
   if(vt==='出張'&&!lv.visit){alert('バイエル程度には出張レッスンがありません');return}
-  state.students.push({id:state.nextId++,name,loginId:lid,loginPw:lpw,level,visitType:vt,tickets:lv.total,purchased:todayISO(),
-    history:[{date:todayJP(),type:'購入',delta:lv.total,note:`${level}・${vt}`}]});
+  const isUnpaid=document.getElementById('add-unpaid')?.checked||false;
+  state.students.push({id:state.nextId++,name,loginId:lid,loginPw:lpw,level,visitType:vt,unpaid:isUnpaid,tickets:lv.total,purchased:todayISO(),
+    history:[{date:todayJP(),type:'購入',delta:lv.total,note:`${level}・${vt}${isUnpaid?'・未収':''}`}]});
   save();cmc();renderTeacher();
 }
 
@@ -619,6 +665,7 @@ function renderStudent(){
   const dots=Array.from({length:lv.total},(_,i)=>
     `<div class="stu-dot ${i<s.tickets?'stu-dot-rem':'stu-dot-used'}">${i<s.tickets?i+1:'✓'}</div>`).join('');
   let alerts='';
+  if(s.unpaid) alerts+=`<div class="alert-box alert-warn">💰 レッスン費が未収です。講師にご確認ください。</div>`;
   if(d<0)        alerts+=`<div class="alert-box alert-danger">⚠️ チケットの有効期限が切れています。講師にご連絡ください。</div>`;
   else if(d<=30) alerts+=`<div class="alert-box alert-danger">⚠️ 有効期限まで残り${d}日です。次回のご購入をご検討ください。</div>`;
   else if(d<=60) alerts+=`<div class="alert-box alert-warn">有効期限まで残り${d}日です。</div>`;
