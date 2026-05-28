@@ -139,6 +139,27 @@ body{font-family:'Hiragino Kline','Hiragino Sans','Yu Gothic',sans-serif;font-si
 <div id="root"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;color:#2C5F8A;font-size:15px;font-weight:600;">🎹 読み込み中...</div></div>
 <div id="modal"></div>
 
+<!-- アプリ起動関数を先に定義（Firebaseより前に読み込む必要あり） -->
+<script>
+window._appReady = false;
+window._initialData = null;
+window._suppressRemoteUpdate = false;
+
+window._startApp = function(){
+  if(window._initialData){
+    if(typeof state !== 'undefined') state = window._initialData;
+  }
+  if(typeof render === 'function') render();
+  else setTimeout(window._startApp, 100); // renderがまだ未定義なら少し待つ
+};
+
+window._onFirebaseData = function(val){
+  if(window._suppressRemoteUpdate) return;
+  if(typeof state !== 'undefined') state = val;
+  if(typeof render === 'function') render();
+};
+</script>
+
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -167,7 +188,6 @@ window._fbSave = (stateObj) => {
 onValue(dataRef, (snapshot) => {
   const val = snapshot.val();
   if (val) {
-    // すでにアプリ起動済みの場合はステートだけ更新して再描画
     if (window._appReady) {
       window._onFirebaseData(val);
     } else {
@@ -176,23 +196,31 @@ onValue(dataRef, (snapshot) => {
       window._startApp();
     }
   } else {
-    // Firebaseにデータがない場合はデフォルトデータで初期化
     window._appReady = true;
     window._startApp();
   }
 }, (error) => {
   console.error('Firebase read error:', error);
-  // オフライン時はlocalStorageフォールバック
-  window._appReady = true;
-  window._startApp();
+  if (!window._appReady) {
+    window._appReady = true;
+    window._startApp();
+  }
 });
+
+// 5秒以内にFirebaseから応答がなければ強制起動
+setTimeout(() => {
+  if (!window._appReady) {
+    console.warn('Firebase timeout - starting app without data');
+    window._appReady = true;
+    window._startApp();
+  }
+}, 5000);
 </script>
 
 <script>
 const TEACHER_PW_KEY='ptv3_teacherPW';
 function getTPW(){return localStorage.getItem(TEACHER_PW_KEY)||'teacher123'}
 function setTPW(v){localStorage.setItem(TEACHER_PW_KEY,v)}
-
 const LEVELS={
   'バイエル':      {label:'バイエル程度（45分）',   total:5, home:{price:11000,refundPer:2200}, visit:null},
   'ブルグミュラー':{label:'ブルグミュラー程度（45分）',total:5, home:{price:13200,refundPer:2640}, visit:{price:14300,refundPer:2860}},
