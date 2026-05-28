@@ -314,7 +314,8 @@ function doLogin(){
 /* TEACHER */
 function renderTeacher(){
   let c='';
-  if(currentTab==='list')     c=buildList();
+  if(currentTab==='list')          c=buildList();
+  else if(currentTab==='detail')   {const s=state.students.find(x=>x.id===selectedId);c=s?buildDet(s):'<p style="color:#aaa">生徒が見つかりません</p>';}
   else if(currentTab==='history')  c=buildAllHist();
   else if(currentTab==='summary')  c=buildSummary();
   else if(currentTab==='accounts') c=buildAccounts();
@@ -335,23 +336,21 @@ function renderTeacher(){
   <div>${c}</div>
 </div>`;
 }
-function sw(t){currentTab=t;renderTeacher()}
+function sw(t){if(t==="list")selectedId=null;currentTab=t;renderTeacher()}
 
 function buildList(){
   const cards=state.students.map(s=>{
     const lv=LEVELS[s.level],pct=Math.round(s.tickets/lv.total*100),bc=barCls(s.tickets,lv.total);
-    return`<div class="s-card${selectedId===s.id?' sel':''}" onclick="sel(${s.id})">
+    return`<div class="s-card" onclick="sel(${s.id})">
       <div class="s-nm">${esc(s.name)}${s.unpaid?` <span class="unpaid-badge">未収</span>`:''}</div>
       <div class="s-lid">ID: ${esc(s.loginId)}</div>
-      <div class="s-lv">${lv.label}</div>
+      <div class="s-lv">${lv.label}　${s.visitType||'講師宅'}レッスン</div>
       <div class="bar-wrap"><div class="bar-fill ${bc}" style="width:${pct}%"></div></div>
       <div class="s-cnt"><b>${s.tickets}</b> / ${lv.total}回 残り</div>
     </div>`;
   }).join('');
-  let det='';
-  if(selectedId){const s=state.students.find(x=>x.id===selectedId);if(s)det=buildDet(s)}
   return`<div class="s-grid">${cards||'<p style="color:#aaa;font-size:13px;">生徒がいません</p>'}</div>
-  <button class="add-btn" onclick="openAdd()">＋ 生徒を追加</button>${det}`;
+  <button class="add-btn" onclick="openAdd()">＋ 生徒を追加</button>`;
 }
 
 function buildDet(s){
@@ -359,37 +358,62 @@ function buildDet(s){
   const dots=Array.from({length:lv.total},(_,i)=>
     `<div class="dot ${i<s.tickets?'dot-rem':'dot-used'}">${i<s.tickets?i+1:'✓'}</div>`).join('');
   const ex=expiryInfo(s);
-  const hist=[...s.history].reverse().slice(0,8).map(h=>{
-    const b=h.type==='購入'?'b-green':h.type==='返金'?'b-red':'b-amber';
-    const noteStr=h.note?`<span style="color:#aaa;font-size:11px">${esc(h.note)}</span>`:'';
+
+  // 履歴（全件、レッスンは日付編集可）
+  const hist=[...s.history].map((h,i)=>{
+    const origIdx=s.history.length-1-i; // reverseせずにindexを保持
+    return{...h,origIdx};
+  });
+  const histRows=[...s.history].reverse().map((h,ri)=>{
+    const origIdx=s.history.length-1-ri;
+    const b=h.type==='購入'?'b-green':h.type==='返金'?'b-red':h.type==='領収'?'b-green':h.type==='未収'?'b-amber':'b-amber';
+    const noteStr=h.note?`<span style="color:#aaa;font-size:11px;margin-left:4px">${esc(h.note)}</span>`:'';
+    if(h.type==='レッスン'){
+      // 日付編集可能
+      return`<div class="hrow" style="flex-wrap:wrap;gap:4px">
+        <input type="date" value="${jpToISO(h.date)}" id="hdate-${s.id}-${origIdx}"
+          style="padding:3px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text);background:var(--card)">
+        <span class="badge ${b}">${h.type}</span>${noteStr}
+        <span style="color:var(--text-muted);font-size:12px">${h.delta}回</span>
+        <button class="abtn abtn-sm" data-save-hist="${s.id}-${origIdx}" style="padding:3px 9px;font-size:11px" onclick="saveHistDate(${s.id},${origIdx})">保存</button>
+      </div>`;
+    }
     return`<div class="hrow"><span class="hdate">${h.date}</span><span class="badge ${b}">${h.type}</span>${noteStr}<span>${h.delta>0?'+'+h.delta:h.delta}回</span></div>`;
   }).join('');
-  return`<div class="det">
+
+  return`
+  <div style="margin-bottom:12px">
+    <button class="abtn" onclick="sw('list')" style="display:inline-flex;align-items:center;gap:4px">← 一覧に戻る</button>
+  </div>
+  <div class="det">
     <div class="det-head">
       <div>
-        <div class="det-nm">${esc(s.name)}</div>
+        <div class="det-nm">${esc(s.name)}${s.unpaid?` <span class="unpaid-badge">未収</span>`:''}</div>
         <div class="det-sub">${lv.label}　${s.visitType||'講師宅'}レッスン　ログインID: ${esc(s.loginId)}</div>
       </div>
       <button class="abtn abtn-danger abtn-sm" onclick="delStu(${s.id})">削除</button>
     </div>
+
     <div class="hlabel">チケット残数</div>
     <div class="dots">${dots}</div>
     <div class="expiry ${ex.cls}">${ex.text}</div>
     ${s.unpaid?`<div class="unpaid-badge-lg">💰 未収　― レッスン費が未収です</div>`:''}
 
-    <div class="unpaid-row">
+    <div class="unpaid-row" style="margin-top:12px">
       <div class="hlabel" style="margin-bottom:4px">レッスン費の収納状況</div>
       ${s.unpaid
-        ? `<div style="font-size:13px;color:#7a5c00;margin-bottom:8px">現在：<b>未収</b></div>
-           <div class="hlabel" style="margin-bottom:4px">領収日（初回レッスン日）を入力して領収済みに変更</div>
-           <div class="receipt-row">
-             <input type="date" id="receipt-date-${s.id}" value="${s.purchased||''}">
-             <button class="abtn abtn-sm abtn-primary" onclick="markReceived(${s.id})">領収済みにする</button>
-           </div>`
-        : `<div style="font-size:13px;color:var(--ok);margin-bottom:6px">✅ 領収済み</div>
-           <button class="abtn abtn-sm abtn-warn" onclick="toggleUnpaid(${s.id})">未収に変更</button>`
+        ?`<div style="font-size:13px;color:#7a5c00;margin-bottom:8px">現在：<b>未収</b></div>
+          <div class="hlabel" style="margin-bottom:4px">領収日（初回レッスン日）を入力して領収済みに変更</div>
+          <div class="receipt-row">
+            <input type="date" id="receipt-date-${s.id}" value="${s.purchased||''}">
+            <button class="abtn abtn-sm abtn-primary" onclick="markReceived(${s.id})">領収済みにする</button>
+          </div>`
+        :`<div style="font-size:13px;color:var(--ok);margin-bottom:6px">✅ 領収済み</div>
+          <button class="abtn abtn-sm abtn-warn" onclick="toggleUnpaid(${s.id})">未収に変更</button>`
       }
     </div>
+
+    <div class="purchased-row" style="margin-top:12px">
       <div class="hlabel">チケット購入日（＝1回目のレッスン日）</div>
       <div class="purchased-current">現在の設定：${isoToJP(s.purchased)||'未設定'}</div>
       <div class="date-edit-row">
@@ -404,8 +428,25 @@ function buildDet(s){
       <button class="abtn" onclick="buyT(${s.id})">チケット購入 +${lv.total}</button>
       ${s.tickets>0?`<button class="abtn abtn-warn" onclick="refund(${s.id})">返金処理</button>`:''}
     </div>
-    ${hist?`<div class="hist"><div class="hlabel">直近の記録</div>${hist}</div>`:''}
+
+    ${histRows?`<div class="hist"><div class="hlabel">レッスン記録　<span style="font-size:10px;font-weight:400;color:#bbb">※レッスン日は編集できます</span></div>${histRows}</div>`:''}
   </div>`;
+}
+
+function jpToISO(jpDate){
+  if(!jpDate)return"";
+  const m=jpDate.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if(!m)return"";
+  return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0");
+}
+function saveHistDate(studentId,histIdx){
+  const s=state.students.find(x=>x.id===studentId);if(!s)return;
+  const inp=document.getElementById("hdate-"+studentId+"-"+histIdx);
+  if(!inp||!inp.value){alert("日付を選択してください");return}
+  s.history[histIdx].date=isoToJP(inp.value);
+  save();
+  const btn=document.querySelector("[data-save-hist=""+studentId+"-"+histIdx+""]");
+  if(btn){btn.textContent="✓ 保存済";setTimeout(()=>{btn.textContent="保存"},1500)}
 }
 
 function savePD(id){
@@ -509,7 +550,7 @@ function changeTPW(){
   setTPW(nw);msg.style.color='var(--ok)';msg.textContent='パスワードを変更しました ✓';
 }
 
-function sel(id){selectedId=selectedId===id?null:id;renderTeacher()}
+function sel(id){selectedId=id;currentTab="detail";renderTeacher()}
 function useT(id){
   const s=state.students.find(x=>x.id===id);
   if(!s||s.tickets<=0){alert('チケットがありません');return}
