@@ -473,7 +473,7 @@ function saveHistDate(studentId,histIdx){
   if(!inp||!inp.value){alert("日付を選択してください");return}
   s.history[histIdx].date=isoToJP(inp.value);
   save();
-  const btn=document.querySelector("[data-save-hist=""+studentId+"-"+histIdx+""]");
+  const btn=document.querySelector('[data-save-hist="'+studentId+'-'+histIdx+'"]');
   if(btn){btn.textContent="✓ 保存済";setTimeout(()=>{btn.textContent="保存"},1500)}
 }
 
