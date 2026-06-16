@@ -1,0 +1,15 @@
+{
+  "name": "freelyピアノ教室 生徒管理",
+  "short_name": "生徒管理",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5faf6",
+  "theme_color": "#4c9a68",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
