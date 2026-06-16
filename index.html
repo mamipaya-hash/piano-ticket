@@ -451,6 +451,20 @@ function buildDet(s){
       </div>
     </div>
 
+    <div class="purchased-row" style="margin-top:12px">
+      <div class="hlabel">次回レッスン予約日時</div>
+      <div style="margin-bottom:6px;font-size:12px;color:var(--text-muted)">
+        現在：${s.nextLesson ? `<b style="color:var(--accent)">${esc(s.nextLesson)}</b>` : '<span>レッスン予約なし</span>'}
+      </div>
+      <div class="date-edit-row" style="flex-wrap:wrap;gap:7px">
+        <input type="datetime-local" id="nl-${s.id}" value="${s.nextLesson ? s.nextLesson.replace(' ', 'T').replace(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})/, (_, y, m, d, h, mi) => `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${h.padStart(2,'0')}:${mi}`) : ''}"
+          style="padding:6px 9px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);color:var(--text)">
+        <button class="abtn abtn-sm abtn-primary" onclick="saveNextLesson(${s.id})">保存</button>
+        <button class="abtn abtn-sm abtn-danger" onclick="clearNextLesson(${s.id})">予約なしにする</button>
+        <span id="nl-msg-${s.id}" style="font-size:12px;color:var(--ok)"></span>
+      </div>
+    </div>
+
     <div class="actions">
       <button class="abtn abtn-primary" onclick="useT(${s.id})">レッスン実施 −1</button>
       <button class="abtn" onclick="buyT(${s.id})">チケット購入 +${lv.total}</button>
@@ -576,6 +590,26 @@ function changeTPW(){
   if(!nw){msg.style.color='var(--danger)';msg.textContent='新しいパスワードを入力してください';return}
   if(nw!==nw2){msg.style.color='var(--danger)';msg.textContent='確認パスワードが一致しません';return}
   setTPW(nw);msg.style.color='var(--ok)';msg.textContent='パスワードを変更しました ✓';
+}
+
+function saveNextLesson(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  const v=document.getElementById('nl-'+id).value;
+  if(!v){alert('日時を選択してください');return}
+  // datetime-local の値 (YYYY-MM-DDTHH:MM) を日本語表記に変換
+  const [datePart,timePart]=v.split('T');
+  const [y,m,d]=datePart.split('-');
+  const [h,mi]=timePart.split(':');
+  s.nextLesson=`${parseInt(y)}年${parseInt(m)}月${parseInt(d)}日 ${h}:${mi}`;
+  save();
+  const msg=document.getElementById('nl-msg-'+id);
+  if(msg){msg.textContent='保存しました ✓';setTimeout(()=>{renderTeacher()},800)}
+}
+function clearNextLesson(id){
+  const s=state.students.find(x=>x.id===id);if(!s)return;
+  if(!confirm('予約をキャンセルして「レッスン予約なし」にしますか？'))return;
+  s.nextLesson=null;
+  save();renderTeacher();
 }
 
 function sel(id){selectedId=id;currentTab="detail";renderTeacher()}
@@ -758,6 +792,20 @@ function renderStudent(){
   </div>
   <div class="stu-expiry ${ex.cls}">${ex.text}</div>
   ${s.purchased?`<div class="stu-purchased">チケット購入日：${isoToJP(s.purchased)}</div>`:''}
+
+  <div class="stu-section">
+    <h3>次回レッスン予約</h3>
+    <div id="stu-next-lesson">
+      ${s.nextLesson
+        ? `<div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:8px">📅 ${esc(s.nextLesson)}</div>`
+        : `<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">レッスン予約なし</div>`}
+    </div>
+    <a href="https://line.me/ti/p/-qzf85CKHt" target="_blank"
+      style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#06C755;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;margin-top:4px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.02 2 11c0 3.07 1.6 5.78 4.07 7.5L5 21l2.72-1.36C9.04 20.19 10.49 20.5 12 20.5c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
+      レッスン予約はLINEから
+    </a>
+  </div>
 
   <div class="stu-section">
     <h3>ログイン情報の変更</h3>
