@@ -794,6 +794,19 @@ function renderStudent(){
   ${s.purchased?`<div class="stu-purchased">チケット購入日：${isoToJP(s.purchased)}</div>`:''}
 
   <div class="stu-section">
+    <h3>レッスン履歴</h3>
+    ${(()=>{
+      const purchasedJP=s.purchased?isoToJP(s.purchased):'';
+      const lessons=s.history.filter(h=>h.type==='レッスン'&&(!purchasedJP||h.date>=purchasedJP)).map(h=>h.date).reverse();
+      if(!lessons.length) return '<div style="font-size:13px;color:var(--text-muted)">まだレッスンの記録がありません</div>';
+      return lessons.map((d,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:13px">
+        <span style="color:var(--text-muted);min-width:20px;font-size:11px">${i+1}</span>
+        <span>📅 ${esc(d)}</span>
+      </div>`).join('');
+    })()}
+  </div>
+
+  <div class="stu-section">
     <h3>次回レッスン予約</h3>
     <div id="stu-next-lesson">
       ${s.nextLesson
