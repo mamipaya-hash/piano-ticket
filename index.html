@@ -218,23 +218,23 @@ setTimeout(() => {
 </script>
 
 <script>
-const TEACHER_PW_KEY='ptv3_teacherPW';
-function getTPW(){return localStorage.getItem(TEACHER_PW_KEY)||'teacher123'}
-function setTPW(v){localStorage.setItem(TEACHER_PW_KEY,v)}
 const LEVELS={
   'バイエル':      {label:'バイエル程度（45分）',   total:5, home:{price:11000,refundPer:2200}, visit:null},
   'ブルグミュラー':{label:'ブルグミュラー程度（45分）',total:5, home:{price:13200,refundPer:2640}, visit:{price:14300,refundPer:2860}},
   'ソナチネ':      {label:'ソナチネ以上（50分）',   total:4, home:{price:12100,refundPer:3025}, visit:{price:13200,refundPer:3300}}
 };
-// 後方互換：旧データの refundPer を参照している箇所向けのヘルパー
 function getRefundPer(s){
   const lv=LEVELS[s.level];
   if(!lv) return 0;
   const vt=s.visitType==='出張'?'visit':'home';
   return (lv[vt]||lv.home).refundPer;
 }
+// 講師パスワードはstateに含めてFirebaseで管理
+function getTPW(){ return state.teacherPw || 'teacher123' }
+function setTPW(v){ state.teacherPw = v; save(); }
 
 const DEFAULT_STATE = {
+  teacherPw: 'teacher123',
   students:[
     {id:1,name:'田中 さくら',loginId:'sakura',loginPw:'1234',level:'バイエル',tickets:3,purchased:'2025-01-10',
      history:[{date:'2025年1月10日',type:'購入',delta:5},{date:'2025年1月18日',type:'レッスン',delta:-1},{date:'2025年2月1日',type:'レッスン',delta:-1}]},
@@ -416,17 +416,7 @@ function buildDet(s){
   <div class="det">
     <div class="det-head">
       <div>
-        <div class="det-nm" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span id="nm-disp-${s.id}">${esc(s.name)}</span>
-          ${s.unpaid?`<span class="unpaid-badge">未収</span>`:''}
-          <button class="abtn abtn-sm" style="font-size:11px;padding:2px 8px" onclick="toggleNameEdit(${s.id})">✏️ 名前変更</button>
-        </div>
-        <div id="nm-edit-${s.id}" style="display:none;margin:6px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="nm-inp-${s.id}" value="${esc(s.name)}" style="padding:5px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--card);color:var(--text);min-width:140px">
-          <button class="abtn abtn-sm abtn-primary" onclick="saveName(${s.id})">保存</button>
-          <button class="abtn abtn-sm" onclick="toggleNameEdit(${s.id})">キャンセル</button>
-          <span id="nm-msg-${s.id}" style="font-size:12px;color:var(--ok)"></span>
-        </div>
+        <div class="det-nm">${esc(s.name)}${s.unpaid?` <span class="unpaid-badge">未収</span>`:''}</div>
         <div class="det-sub">${lv.label}　${s.visitType||'講師宅'}レッスン　ログインID: ${esc(s.loginId)}</div>
       </div>
       <button class="abtn abtn-danger abtn-sm" onclick="delStu(${s.id})">削除</button>
@@ -458,20 +448,6 @@ function buildDet(s){
         <input type="date" id="pd-${s.id}" value="${s.purchased||''}">
         <button class="abtn abtn-sm abtn-primary" onclick="savePD(${s.id})">保存</button>
         <span id="pd-msg-${s.id}" style="font-size:12px;color:var(--ok)"></span>
-      </div>
-    </div>
-
-    <div class="purchased-row" style="margin-top:12px">
-      <div class="hlabel">次回レッスン予約日時</div>
-      <div style="margin-bottom:6px;font-size:12px;color:var(--text-muted)">
-        現在：${s.nextLesson ? `<b style="color:var(--accent)">${esc(s.nextLesson)}</b>` : '<span>レッスン予約なし</span>'}
-      </div>
-      <div class="date-edit-row" style="flex-wrap:wrap;gap:7px">
-        <input type="datetime-local" id="nl-${s.id}" value="${s.nextLesson ? s.nextLesson.replace(' ', 'T').replace(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})/, (_, y, m, d, h, mi) => `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${h.padStart(2,'0')}:${mi}`) : ''}"
-          style="padding:6px 9px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);color:var(--text)">
-        <button class="abtn abtn-sm abtn-primary" onclick="saveNextLesson(${s.id})">保存</button>
-        <button class="abtn abtn-sm abtn-danger" onclick="clearNextLesson(${s.id})">予約なしにする</button>
-        <span id="nl-msg-${s.id}" style="font-size:12px;color:var(--ok)"></span>
       </div>
     </div>
 
@@ -590,7 +566,7 @@ function buildSettings(){
     <div class="frow"><label>新しいパスワード（確認）</label><input id="nt2" type="password"></div>
     <button class="abtn abtn-primary" onclick="changeTPW()">変更する</button>
     <div id="tpw-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
-    <p class="note" style="margin-top:12px">※ 生徒のパスワードは「アカウント」タブで管理してください。</p>
+    <p class="note" style="margin-top:12px">※ 講師パスワードはFirebaseに保存されるため、スマホ・PCどちらからでも同じパスワードでログインできます。生徒のパスワードは「アカウント」タブで管理してください。</p>
   </div>`;
 }
 function changeTPW(){
@@ -600,41 +576,6 @@ function changeTPW(){
   if(!nw){msg.style.color='var(--danger)';msg.textContent='新しいパスワードを入力してください';return}
   if(nw!==nw2){msg.style.color='var(--danger)';msg.textContent='確認パスワードが一致しません';return}
   setTPW(nw);msg.style.color='var(--ok)';msg.textContent='パスワードを変更しました ✓';
-}
-
-function toggleNameEdit(id){
-  const el=document.getElementById('nm-edit-'+id);
-  if(!el)return;
-  el.style.display=el.style.display==='none'?'flex':'none';
-}
-function saveName(id){
-  const s=state.students.find(x=>x.id===id);if(!s)return;
-  const v=(document.getElementById('nm-inp-'+id).value||'').trim();
-  if(!v){alert('名前を入力してください');return}
-  s.name=v;
-  save();
-  const msg=document.getElementById('nm-msg-'+id);
-  if(msg){msg.textContent='保存しました ✓';setTimeout(()=>{renderTeacher()},800)}
-}
-
-function saveNextLesson(id){
-  const s=state.students.find(x=>x.id===id);if(!s)return;
-  const v=document.getElementById('nl-'+id).value;
-  if(!v){alert('日時を選択してください');return}
-  // datetime-local の値 (YYYY-MM-DDTHH:MM) を日本語表記に変換
-  const [datePart,timePart]=v.split('T');
-  const [y,m,d]=datePart.split('-');
-  const [h,mi]=timePart.split(':');
-  s.nextLesson=`${parseInt(y)}年${parseInt(m)}月${parseInt(d)}日 ${h}:${mi}`;
-  save();
-  const msg=document.getElementById('nl-msg-'+id);
-  if(msg){msg.textContent='保存しました ✓';setTimeout(()=>{renderTeacher()},800)}
-}
-function clearNextLesson(id){
-  const s=state.students.find(x=>x.id===id);if(!s)return;
-  if(!confirm('予約をキャンセルして「レッスン予約なし」にしますか？'))return;
-  s.nextLesson=null;
-  save();renderTeacher();
 }
 
 function sel(id){selectedId=id;currentTab="detail";renderTeacher()}
@@ -817,33 +758,6 @@ function renderStudent(){
   </div>
   <div class="stu-expiry ${ex.cls}">${ex.text}</div>
   ${s.purchased?`<div class="stu-purchased">チケット購入日：${isoToJP(s.purchased)}</div>`:''}
-
-  <div class="stu-section">
-    <h3>レッスン履歴</h3>
-    ${(()=>{
-      const purchasedJP=s.purchased?isoToJP(s.purchased):'';
-      const lessons=s.history.filter(h=>h.type==='レッスン'&&(!purchasedJP||h.date>=purchasedJP)).map(h=>h.date).reverse();
-      if(!lessons.length) return '<div style="font-size:13px;color:var(--text-muted)">まだレッスンの記録がありません</div>';
-      return lessons.map((d,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:13px">
-        <span style="color:var(--text-muted);min-width:36px;font-size:11px">${lessons.length-i}回目</span>
-        <span>📅 ${esc(d)}</span>
-      </div>`).join('');
-    })()}
-  </div>
-
-  <div class="stu-section">
-    <h3>次回レッスン予約</h3>
-    <div id="stu-next-lesson">
-      ${s.nextLesson
-        ? `<div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:8px">📅 ${esc(s.nextLesson)}</div>`
-        : `<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">レッスン予約なし</div>`}
-    </div>
-    <a href="https://line.me/ti/p/-qzf85CKHt" target="_blank"
-      style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#06C755;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;margin-top:4px">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.02 2 11c0 3.07 1.6 5.78 4.07 7.5L5 21l2.72-1.36C9.04 20.19 10.49 20.5 12 20.5c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
-      レッスン予約はLINEから
-    </a>
-  </div>
 
   <div class="stu-section">
     <h3>ログイン情報の変更</h3>
